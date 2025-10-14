@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 면접 연습 도구</title>
+  <link href="/static/output.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 text-gray-900 flex flex-col items-center justify-center min-h-screen font-sans">
+  <div class="text-center w-full max-w-md px-4">
+    <h1 class="text-3xl font-bold mb-6">🎤 AI 면접 연습 도구</h1>
+
+    <div class="flex justify-center space-x-4 mb-6">
+      <button id="recBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        🎙️ 녹음 시작
+      </button>
+      <button id="stopBtn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" disabled>
+        ⏹ 정지
+      </button>
+    </div>
+
+    <p id="status" class="text-gray-600 mb-4">대기 중...</p>
+
+    <!-- STT 결과 -->
+    <div id="result" class="bg-white shadow p-4 rounded text-left mb-4 whitespace-pre-wrap">
+      🎧 음성 인식 결과가 여기에 표시됩니다.
+    </div>
+
+    <!-- GPT 답변 -->
+    <div id="aiReply" class="bg-blue-50 shadow p-4 rounded text-left text-blue-800 whitespace-pre-wrap">
+      🤖 AI 답변이 여기에 표시됩니다.
+    </div>
+  </div>
+
+  <script>
+    const recBtn = document.getElementById("recBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const statusEl = document.getElementById("status");
+    const resultEl = document.getElementById("result");
+    const aiReplyEl = document.getElementById("aiReply");
+
+    let mediaRecorder, chunks = [];
+
+    async function initRecorder() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+
+        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+
+        mediaRecorder.onstop = async () => {
+          statusEl.textContent = "STT 변환 중...";
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          chunks = [];
+
+          const form = new FormData();
+          form.append("file", blob, "recording.webm");
+
+          try {
+            // 🔹 API 서버 주소 (FastAPI가 실행 중이어야 함)
+            const res = await fetch("/stt/upload", {
+              method: "POST",
+              body: form,
+            });
+
+            const data = await res.json();
+
+            resultEl.textContent = "🗣 인식된 문장:\n" + (data.stt_text ?? "(인식 실패)");
+            aiReplyEl.textContent = "🤖 GPT 답변:\n" + (data.gpt_reply ?? "(답변 없음)");
+            statusEl.textContent = "✅ 완료";
+          } catch (error) {
+            console.error("Fetch error:", error);
+            statusEl.textContent = "❌ 서버 오류";
+            resultEl.textContent = "(서버에 연결할 수 없습니다)";
+          }
+        };
+      } catch (err) {
+        console.error("마이크 접근 오류:", err);
+        alert("마이크 접근이 거부되었습니다. 브라우저 권한을 확인하세요.");
+      }
+    }
+
+    recBtn.onclick = async () => {
+      recBtn.disabled = true;
+      stopBtn.disabled = false;
+      statusEl.textContent = "🎙️ 녹음 중...";
+      if (!mediaRecorder) await initRecorder();
+      mediaRecorder.start();
+    };
+
+    stopBtn.onclick = () => {
+      stopBtn.disabled = true;
+      recBtn.disabled = false;
+      statusEl.textContent = "⏹ 녹음 종료";
+      mediaRecorder.stop();
+    };
+  </script>
+</body>
+</html>
