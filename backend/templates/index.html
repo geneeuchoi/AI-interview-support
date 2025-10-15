@@ -1,99 +1,263 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI 면접 연습 도구</title>
-  <link href="/static/output.css" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>음성 인식 & 발음 평가</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 text-gray-900 flex flex-col items-center justify-center min-h-screen font-sans">
-  <div class="text-center w-full max-w-md px-4">
-    <h1 class="text-3xl font-bold mb-6">🎤 AI 면접 연습 도구</h1>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center text-indigo-900 mb-8">
+            🎤 음성 인식 & 발음 평가 시스템
+        </h1>
 
-    <div class="flex justify-center space-x-4 mb-6">
-      <button id="recBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-        🎙️ 녹음 시작
-      </button>
-      <button id="stopBtn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" disabled>
-        ⏹ 정지
-      </button>
+        <!-- 기능 1: 데스크톱 오디오 캡쳐 -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">
+                📻 데스크톱 오디오 분석
+            </h2>
+            <p class="text-gray-600 mb-4">데스크톱에서 재생되는 오디오를 캡쳐하여 AI가 답변합니다.</p>
+
+            <div class="flex gap-4 mb-4">
+                <button id="startDesktopCapture" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition">
+                    🎧 녹음 시작
+                </button>
+                <button id="stopDesktopCapture" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition disabled:opacity-50" disabled>
+                    ⏹️ 녹음 중지
+                </button>
+            </div>
+
+            <div id="desktopStatus" class="text-sm text-gray-600 mb-4"></div>
+
+            <div id="desktopResult" class="hidden">
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">인식된 텍스트:</h3>
+                    <p id="desktopText" class="text-gray-700"></p>
+                </div>
+                <div class="bg-green-50 border-l-4 border-green-500 p-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">AI 답변:</h3>
+                    <p id="desktopAiResponse" class="text-gray-700 whitespace-pre-wrap"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 기능 2: 사용자 음성 평가 -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">
+                🗣️ 발음 & 문법 평가
+            </h2>
+            <p class="text-gray-600 mb-4">당신의 발음, 억양, 문법을 AI가 분석하고 개선점을 알려드립니다.</p>
+
+            <div class="flex gap-4 mb-4">
+                <button id="startSpeechRecord" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition">
+                    🎤 녹음 시작
+                </button>
+                <button id="stopSpeechRecord" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition disabled:opacity-50" disabled>
+                    ⏹️ 녹음 중지
+                </button>
+            </div>
+
+            <div id="speechStatus" class="text-sm text-gray-600 mb-4"></div>
+
+            <div id="speechResult" class="hidden">
+                <div class="bg-gray-50 border-l-4 border-gray-500 p-4 mb-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">인식된 텍스트:</h3>
+                    <p id="speechText" class="text-gray-700"></p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-yellow-800 mb-2">🎯 발음 피드백</h3>
+                        <div id="pronunciationFeedback" class="space-y-2"></div>
+                    </div>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-red-800 mb-2">✏️ 문법 피드백</h3>
+                        <div id="grammarFeedback" class="space-y-2"></div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-blue-800 mb-2">💡 표현 개선</h3>
+                        <div id="fluencyFeedback" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">종합 평가 (<span id="overallScore" class="text-indigo-600"></span>점)</h3>
+                    <p id="summary" class="text-gray-700"></p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <p id="status" class="text-gray-600 mb-4">대기 중...</p>
+    <script>
+        const API_URL = 'http://localhost:8000';
 
-    <!-- STT 결과 -->
-    <div id="result" class="bg-white shadow p-4 rounded text-left mb-4 whitespace-pre-wrap">
-      🎧 음성 인식 결과가 여기에 표시됩니다.
-    </div>
+        let desktopMediaRecorder;
+        let desktopAudioChunks = [];
+        let speechMediaRecorder;
+        let speechAudioChunks = [];
 
-    <!-- GPT 답변 -->
-    <div id="aiReply" class="bg-blue-50 shadow p-4 rounded text-left text-blue-800 whitespace-pre-wrap">
-      🤖 AI 답변이 여기에 표시됩니다.
-    </div>
-  </div>
+        // 기능 1: 데스크톱 오디오 캡쳐
+        document.getElementById('startDesktopCapture').addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    }
+                });
 
-  <script>
-    const recBtn = document.getElementById("recBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const statusEl = document.getElementById("status");
-    const resultEl = document.getElementById("result");
-    const aiReplyEl = document.getElementById("aiReply");
+                desktopAudioChunks = [];
+                desktopMediaRecorder = new MediaRecorder(stream);
 
-    let mediaRecorder, chunks = [];
+                desktopMediaRecorder.ondataavailable = (event) => {
+                    desktopAudioChunks.push(event.data);
+                };
 
-    async function initRecorder() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+                desktopMediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(desktopAudioChunks, { type: 'audio/webm' });
+                    await sendDesktopAudio(audioBlob);
+                    stream.getTracks().forEach(track => track.stop());
+                };
 
-        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+                desktopMediaRecorder.start();
+                document.getElementById('startDesktopCapture').disabled = true;
+                document.getElementById('stopDesktopCapture').disabled = false;
+                document.getElementById('desktopStatus').textContent = '🔴 녹음 중...';
+                document.getElementById('desktopResult').classList.add('hidden');
+            } catch (error) {
+                alert('화면 캡쳐 실패: ' + error.message);
+            }
+        });
 
-        mediaRecorder.onstop = async () => {
-          statusEl.textContent = "STT 변환 중...";
-          const blob = new Blob(chunks, { type: "audio/webm" });
-          chunks = [];
+        document.getElementById('stopDesktopCapture').addEventListener('click', () => {
+            if (desktopMediaRecorder && desktopMediaRecorder.state !== 'inactive') {
+                desktopMediaRecorder.stop();
+                document.getElementById('startDesktopCapture').disabled = false;
+                document.getElementById('stopDesktopCapture').disabled = true;
+                document.getElementById('desktopStatus').textContent = '⏸️ 분석 중...';
+            }
+        });
 
-          const form = new FormData();
-          form.append("file", blob, "recording.webm");
+        async function sendDesktopAudio(blob) {
+            const formData = new FormData();
+            formData.append('file', blob, 'desktop_audio.webm');
 
-          try {
-            // 🔹 API 서버 주소 (FastAPI가 실행 중이어야 함)
-            const res = await fetch("/stt/upload", {
-              method: "POST",
-              body: form,
-            });
+            try {
+                const response = await fetch(`${API_URL}/api/stt`, {
+                    method: 'POST',
+                    body: formData
+                });
 
-            const data = await res.json();
+                const result = await response.json();
 
-            resultEl.textContent = "🗣 인식된 문장:\n" + (data.stt_text ?? "(인식 실패)");
-            aiReplyEl.textContent = "🤖 GPT 답변:\n" + (data.gpt_reply ?? "(답변 없음)");
-            statusEl.textContent = "✅ 완료";
-          } catch (error) {
-            console.error("Fetch error:", error);
-            statusEl.textContent = "❌ 서버 오류";
-            resultEl.textContent = "(서버에 연결할 수 없습니다)";
-          }
-        };
-      } catch (err) {
-        console.error("마이크 접근 오류:", err);
-        alert("마이크 접근이 거부되었습니다. 브라우저 권한을 확인하세요.");
-      }
-    }
+                document.getElementById('desktopText').textContent = result.text;
+                document.getElementById('desktopAiResponse').textContent = result.ai_response;
+                document.getElementById('desktopResult').classList.remove('hidden');
+                document.getElementById('desktopStatus').textContent = '✅ 완료!';
+            } catch (error) {
+                alert('오류: ' + error.message);
+                document.getElementById('desktopStatus').textContent = '❌ 오류 발생';
+            }
+        }
 
-    recBtn.onclick = async () => {
-      recBtn.disabled = true;
-      stopBtn.disabled = false;
-      statusEl.textContent = "🎙️ 녹음 중...";
-      if (!mediaRecorder) await initRecorder();
-      mediaRecorder.start();
-    };
+        // 기능 2: 사용자 음성 평가
+        document.getElementById('startSpeechRecord').addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    stopBtn.onclick = () => {
-      stopBtn.disabled = true;
-      recBtn.disabled = false;
-      statusEl.textContent = "⏹ 녹음 종료";
-      mediaRecorder.stop();
-    };
-  </script>
+                speechAudioChunks = [];
+                speechMediaRecorder = new MediaRecorder(stream);
+
+                speechMediaRecorder.ondataavailable = (event) => {
+                    speechAudioChunks.push(event.data);
+                };
+
+                speechMediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(speechAudioChunks, { type: 'audio/webm' });
+                    await evaluateSpeech(audioBlob);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                speechMediaRecorder.start();
+                document.getElementById('startSpeechRecord').disabled = true;
+                document.getElementById('stopSpeechRecord').disabled = false;
+                document.getElementById('speechStatus').textContent = '🔴 녹음 중...';
+                document.getElementById('speechResult').classList.add('hidden');
+            } catch (error) {
+                alert('마이크 접근 실패: ' + error.message);
+            }
+        });
+
+        document.getElementById('stopSpeechRecord').addEventListener('click', () => {
+            if (speechMediaRecorder && speechMediaRecorder.state !== 'inactive') {
+                speechMediaRecorder.stop();
+                document.getElementById('startSpeechRecord').disabled = false;
+                document.getElementById('stopSpeechRecord').disabled = true;
+                document.getElementById('speechStatus').textContent = '⏸️ 분석 중...';
+            }
+        });
+
+        async function evaluateSpeech(blob) {
+            const formData = new FormData();
+            formData.append('file', blob, 'speech_audio.webm');
+
+            try {
+                const response = await fetch(`${API_URL}/api/evaluate-speech`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                document.getElementById('speechText').textContent = result.transcribed_text;
+
+                // 발음 피드백
+                const pronunciationDiv = document.getElementById('pronunciationFeedback');
+                pronunciationDiv.innerHTML = result.pronunciation.length > 0
+                    ? result.pronunciation.map(item => `
+                        <div class="text-sm">
+                            <span class="font-semibold">${item.word}:</span> ${item.issue}<br>
+                            <span class="text-yellow-700">💡 ${item.tip}</span>
+                        </div>
+                    `).join('')
+                    : '<p class="text-sm text-gray-600">문제 없음 ✅</p>';
+
+                // 문법 피드백
+                const grammarDiv = document.getElementById('grammarFeedback');
+                grammarDiv.innerHTML = result.grammar.length > 0
+                    ? result.grammar.map(item => `
+                        <div class="text-sm">
+                            <span class="font-semibold line-through">${item.error}</span><br>
+                            <span class="text-green-700">→ ${item.correction}</span><br>
+                            <span class="text-red-600 text-xs">${item.explanation}</span>
+                        </div>
+                    `).join('')
+                    : '<p class="text-sm text-gray-600">문제 없음 ✅</p>';
+
+                // 표현 개선
+                const fluencyDiv = document.getElementById('fluencyFeedback');
+                fluencyDiv.innerHTML = result.fluency.length > 0
+                    ? result.fluency.map(item => `
+                        <div class="text-sm">
+                            <span class="text-gray-600">"${item.original}"</span><br>
+                            <span class="text-blue-700">→ "${item.improved}"</span><br>
+                            <span class="text-blue-600 text-xs">${item.reason}</span>
+                        </div>
+                    `).join('')
+                    : '<p class="text-sm text-gray-600">이미 훌륭합니다 ✅</p>';
+
+                document.getElementById('overallScore').textContent = result.overall_score;
+                document.getElementById('summary').textContent = result.summary;
+                document.getElementById('speechResult').classList.remove('hidden');
+                document.getElementById('speechStatus').textContent = '✅ 평가 완료!';
+            } catch (error) {
+                alert('오류: ' + error.message);
+                document.getElementById('speechStatus').textContent = '❌ 오류 발생';
+            }
+        }
+    </script>
 </body>
 </html>
