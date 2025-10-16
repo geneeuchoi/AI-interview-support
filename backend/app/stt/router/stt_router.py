@@ -1,21 +1,20 @@
-from fastapi import APIRouter, UploadFile, File, Form
-from app.stt.schemas.stt_schema import STTResponse
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from app.stt.schema.stt_schema import STTResponse
 from app.stt.service.stt_service import STTService
-from app.stt.adapter.stt_adapter import OpenAISttProvider
 
-router = APIRouter(prefix="/api", tags=["stt"])
+router = APIRouter(prefix="/stt", tags=["stt"])
 
-_provider = OpenAISttProvider()
-_service = STTService(_provider)
+def get_stt_service(request: Request) -> STTService:
+    return STTService(request.app.state.stt_provider)
 
-@router.post("/stt", response_model=STTResponse)
-async def stt_endpoint(
-    audio: UploadFile = File(..., description="Audio file"),
-    language: str = Form("ja"),
-    model: str = Form("gpt-4o-mini-transcribe")
-):
+@router.post("", response_model=STTResponse)
+async def post_stt(
+    audio: UploadFile = File(...),
+    language: str = Form(...),
+    model: str = Form(...),
+    service: STTService = Depends(get_stt_service)):
     try:
-        text = await _service.transcribe(audio, model=model, language=language)
+        text = await service.transcribe(audio, model=model, language=language)
         return STTResponse(text=text, model=model, language=language)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"STT failed: {e}")

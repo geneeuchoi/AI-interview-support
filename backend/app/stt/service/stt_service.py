@@ -1,4 +1,5 @@
 from app.stt.adapter.stt_adapter import OpenAISttProvider
+from fastapi import UploadFile
 
 class STTService:
     def __init__(self, provider: OpenAISttProvider) -> None:

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>🎤 STT 테스트 (마이크 입력)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #111827;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+    }
+    h1 { margin-bottom: 24px; }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;stt_router
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 16px;
+      margin: 8px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    textarea {
+      width: 90%;
+      max-width: 600px;
+      height: 150px;
+      margin-top: 20px;
+      border-radius: 8px;
+      border: 1px solid #374151;
+      background: #1f2937;
+      color: white;
+      padding: 12px;
+      resize: none;
+    }
+    audio { margin-top: 20px; }
+    input, select {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #374151;
+      background: #1f2937;
+      color: white;
+    }
+    .row { margin: 8px; }
+  </style>
+</head>
+<body>
+  <h1>🎙️ STT 테스트 클라이언트 (마이크 입력)</h1>
+
+  <div class="row">
+    <label>서버 주소: </label>
+    <input id="baseUrl" type="text" placeholder="예: http://localhost:/api/stt" />
+  </div>
+
+  <div class="row">
+    <label>언어: </label>
+    <select id="language">
+      <option value="ja">일본어 (ja)</option>
+      <option value="ko" selected>한국어 (ko)</option>
+      <option value="en">영어 (en)</option>
+    </select>
+
+    <label>모델: </label>
+    <select id="model">
+      <option value="gpt-4o-mini-transcribe" selected>gpt-4o-mini-transcribe</option>
+      <option value="whisper-1">whisper-1</option>
+    </select>
+  </div>
+
+  <div>
+    <button id="startBtn">🎙️ 녹음 시작</button>
+    <button id="stopBtn" disabled>■ 정지 & 전송</button>
+  </div>
+
+  <audio id="audioPlayer" controls></audio>
+  <textarea id="result" placeholder="변환된 텍스트가 여기에 표시됩니다." readonly></textarea>
+
+  <script>
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const resultBox = document.getElementById("result");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const baseUrlInput = document.getElementById("baseUrl");
+    const languageSelect = document.getElementById("language");
+    const modelSelect = document.getElementById("model");
+
+    let mediaRecorder;
+    let audioChunks = [];
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        // TODO: safari는 webm 지원하지 않음. 나중에 ios도 지원하도록 확장자 수정 필요
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(audioChunks, { type: "audio/webm" });
+          const file = new File([blob], "recording.webm", { type: "audio/webm" });
+          audioPlayer.src = URL.createObjectURL(blob);
+
+          await sendAudioToServer(file);
+        };
+
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        resultBox.value = "🎙️ 녹음 중...";
+      } catch (err) {
+        alert("마이크 접근 실패: " + err.message);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    }
+
+    async function sendAudioToServer(file) {
+      const baseUrl = baseUrlInput.value.trim() || window.location.origin;
+      const url = `${baseUrl}/api/stt`;
+
+      const formData = new FormData();
+      formData.append("audio", file);
+      formData.append("language", languageSelect.value);
+      formData.append("model", modelSelect.value);
+
+      resultBox.value = "⏳ 서버로 전송 중...";
+
+      try {
+        const res = await fetch(url, { method: "POST", body: formData });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        resultBox.value = `✅ 변환 완료:\n${data.text}`;
+      } catch (err) {
+        resultBox.value = "❌ 오류 발생: " + err.message;
+      }
+    }
+
+    startBtn.addEventListener("click", startRecording);
+    stopBtn.addEventListener("click", stopRecording);
+  </script>
+</body>
+</html>
