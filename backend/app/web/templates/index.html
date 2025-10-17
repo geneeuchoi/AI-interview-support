@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>🎤 STT 테스트 (마이크 입력)</title>
+  <title>STT 테스트</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -18,7 +18,7 @@
     button {
       background: #2563eb;
       color: white;
-      border: none;stt_router
+      border: none;
       border-radius: 8px;
       padding: 10px 18px;
       font-size: 16px;
@@ -50,7 +50,7 @@
   </style>
 </head>
 <body>
-  <h1>🎙️ STT 테스트 클라이언트 (마이크 입력)</h1>
+  <h1>STT 테스트 클라이언트</h1>
 
   <div class="row">
     <label>서버 주소: </label>
@@ -78,12 +78,16 @@
   </div>
 
   <audio id="audioPlayer" controls></audio>
-  <textarea id="result" placeholder="변환된 텍스트가 여기에 표시됩니다." readonly></textarea>
+  <textarea id="sttResult" placeholder="변환된 텍스트가 여기에 표시됩니다." readonly></textarea>
+  <textarea id="llmResult" placeholder="AI의 응답이 여기에 표시됩니다." readonly></textarea>
+
+
 
   <script>
     const startBtn = document.getElementById("startBtn");
     const stopBtn = document.getElementById("stopBtn");
-    const resultBox = document.getElementById("result");
+    const sttResultBox = document.getElementById("sttResult");
+    const llmResultBox = document.getElementById("llmResult");
     const audioPlayer = document.getElementById("audioPlayer");
     const baseUrlInput = document.getElementById("baseUrl");
     const languageSelect = document.getElementById("language");
@@ -116,7 +120,7 @@
         mediaRecorder.start();
         startBtn.disabled = true;
         stopBtn.disabled = false;
-        resultBox.value = "🎙️ 녹음 중...";
+        sttResultBox.value = "녹음 중...";
       } catch (err) {
         alert("마이크 접근 실패: " + err.message);
       }
@@ -139,16 +143,53 @@
       formData.append("language", languageSelect.value);
       formData.append("model", modelSelect.value);
 
-      resultBox.value = "⏳ 서버로 전송 중...";
+      sttResultBox.value = "서버로 전송 중...";
 
       try {
         const res = await fetch(url, { method: "POST", body: formData });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const data = await res.json();
-        resultBox.value = `✅ 변환 완료:\n${data.text}`;
+        sttResultBox.value = `${data.text}`;
+
+        await sendSttToLlm(data.text);
+
       } catch (err) {
-        resultBox.value = "❌ 오류 발생: " + err.message;
+        sttResultBox.value = "오류 발생: " + err.message;
+      }
+    }
+
+    async function sendSttToLlm(text) {
+      const baseUrl = baseUrlInput.value.trim() || window.location.origin;
+      const url = `${baseUrl}/api/llm`;
+
+      // TODO: 프롬프트 엔지니어링
+      const body = {
+        text,
+        prompt: "당신은 일본인 IT 면접관입니다.\n유저의 질문에 당신이 만족할 만한 답변을 제시하세요.\n단, 답변은 일본어로 하되, 각각의 한자 옆에 요미가나를 추가해서 일본어에 능숙하지 않은 사용자가 빠르게 읽을 수 있게 도와주세요.",
+        model: "gpt-4o-mini",
+        language: "ja",
+        max_tokens: 512,
+      };
+
+      llmResultBox.value = "서버로 전송 중...";
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const errDetail = await res.json().catch(() => ({}));
+          throw new Error(`HTTP ${res.status} ${JSON.stringify(errDetail)}`);
+        }
+
+        const data = await res.json();
+        llmResultBox.value = `${data.text}`;
+      } catch (err) {
+        llmResultBox.value = err.message;
       }
     }
 
