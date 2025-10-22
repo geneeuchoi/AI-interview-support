@@ -1,24 +1,21 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from app.routes import stt
+from app.stt.adapter.stt_adapter import OpenAISttProvider
+from app.llm.adapter.llm_adapter import OpenAILlmProvider
+from app.web.router.web_router import router as web_router
+from app.stt.router.stt_router import router as stt_router
+from app.llm.router.llm_router import router as llm_router
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.stt_provider = OpenAISttProvider()
+    app.state.llm_provider = OpenAILlmProvider()
+    yield
+app = FastAPI(title="AI interview agent", lifespan=lifespan)
 
-# Flask의 app = Flask(__name__)과 비슷한 역할
-# 이 객체가 실제 서버의 핵심
-# title은 Swagger 문서(/docs)에 표시되는 앱 이름
-app = FastAPI(title="AI interview agent")
+app.include_router(web_router, tags=["web"])
+app.include_router(stt_router, prefix="/api", tags=["stt"])
+app.include_router(llm_router, prefix="/api", tags=["llm"])
 
-# Tailwind 결과 파일(static) 연결
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# HTML 템플릿 연결
-templates = Jinja2Templates(directory="templates")
-
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
-# api 등록
-app.include_router(stt.router, prefix="/stt", tags=["STT"])
+app.mount("/static", StaticFiles(directory="app/web/static"), name="static")
