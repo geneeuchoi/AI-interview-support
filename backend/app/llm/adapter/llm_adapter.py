@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import AsyncGenerator, Optional, Iterable
 from openai import OpenAI
 from dotenv import load_dotenv, find_dotenv
 import anyio
@@ -16,34 +16,47 @@ class OpenAILlmProvider:
     async def qna(
             self,
             text: str,
-            prompt: Optional[str],
-            model: str = "gpt-4o-mini",
-            language: str = "ja",
-            max_tokens: int = 512,
-    ) -> str:
+            prompt: str,
+            model: str,
+            language: str,
+            max_tokens: int,
+    ) -> AsyncGenerator[str, None]:
 
         # TODO: 프롬프트 엔지니어링
-        def _call_openai() -> str:
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": text},
-                ],
-                max_tokens=max_tokens,
+        def _call_openai() -> Iterable:
+            return self.client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": text},
+                    ],
+                    max_tokens=max_tokens,
+                    stream=True,
             )
 
-            reply = (
-                response.choices[0].message.content.strip()
-                if response and response.choices
-                else ""
-            )
-            return reply
+        send, recv = anyio.create_memory_object_stream[str](max_buffer_size=0)
 
-        # 실제 OpenAI 호출은 스레드 풀에서 실행
-        try:
-            reply_text = await anyio.to_thread.run_sync(_call_openai)
-            return reply_text
-        except Exception as e:
-            print(f"[LLM ERROR] {e}")
-            return f"LLM 요청 중 오류가 발생했습니다: {e}"
+        async def producer():
+            try:
+                def run_sync():
+                    stream = _call_openai()
+                    for chunk in stream:
+                        for choice in chunk.choices:
+                            delta = choice.delta
+                            content = getattr(delta, "content", None)
+                            if content:
+                                # 스레드 → async로 안전하게 전송
+                                anyio.from_thread.run(send.send, content)
+
+                await anyio.to_thread.run_sync(run_sync)
+            except Exception as e:
+                print(f"[LLM ERROR] {e}")
+            finally:
+                await send.aclose()
+
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(producer)
+            async with recv:
+                async for token in recv:
+                    yield token

@@ -137,7 +137,7 @@
     async function sendAudioToServer(file) {
       const baseUrl = baseUrlInput.value.trim() || window.location.origin;
       const url = `${baseUrl}/api/stt`;
-
+      const startTime = performance.now();
       const formData = new FormData();
       formData.append("audio", file);
       formData.append("language", languageSelect.value);
@@ -149,9 +149,12 @@
         const res = await fetch(url, { method: "POST", body: formData });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+        const endTime = performance.now();
+        const elapsed = (endTime - startTime) / 1000;
+        console.log(`[SSTResponse] ${elapsed.toFixed(2)}s`);
+
         const data = await res.json();
         sttResultBox.value = `${data.text}`;
-
         await sendSttToLlm(data.text);
 
       } catch (err) {
@@ -162,6 +165,7 @@
     async function sendSttToLlm(text) {
       const baseUrl = baseUrlInput.value.trim() || window.location.origin;
       const url = `${baseUrl}/api/llm`;
+      const startTime = performance.now();
 
       // TODO: 프롬프트 엔지니어링
       const body = {
@@ -182,12 +186,39 @@
         });
 
         if (!res.ok) {
-          const errDetail = await res.json().catch(() => ({}));
+          let errDetail = {};
+          try {
+            errDetail = await res.json();
+          } catch {
+            try {
+              const t = await res.text();
+              errDetail = { message: t.slice(0, 200) };
+            } catch {}
+          }
           throw new Error(`HTTP ${res.status} ${JSON.stringify(errDetail)}`);
         }
 
-        const data = await res.json();
-        llmResultBox.value = `${data.text}`;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+
+        let done = false;
+        llmResultBox.value = ""
+        const startTime = performance.now();
+        let endTime = performance.now();
+        let elapsed = (endTime - startTime) / 1000;
+        console.log(`[LLMCall] ${elapsed.toFixed(2)}s`);
+        while (!done) {
+          const { value, done: streamDone } = await reader.read();
+          done = streamDone;
+          if (value) {
+            const chunkText = decoder.decode(value, { stream: true });
+            llmResultBox.value += chunkText;
+          }
+        }
+        llmResultBox.value += decoder.decode();
+        endTime = performance.now();
+        elapsed = (endTime - startTime) / 1000;
+        console.log(`[LLMResponseFlush] ${elapsed.toFixed(2)}s`);
       } catch (err) {
         llmResultBox.value = err.message;
       }
