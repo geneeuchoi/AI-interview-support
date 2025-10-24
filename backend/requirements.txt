@@ -13,3 +13,6 @@ jinja2
 
 openai==1.45.0
 httpx<0.28
+
+# email
+aiosmtplib
