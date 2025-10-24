@@ -8,11 +8,22 @@ router = APIRouter(prefix="/llm", tags=["llm"])
 def get_llm_service(request: Request) -> LLMService:
     return LLMService(request.app.state.llm_provider)
 
-@router.post("", response_class=StreamingResponse)
-async def post_llm(req: LLMRequest,
+@router.post("/answer", response_class=StreamingResponse)
+async def post_answer(req: LLMRequest,
                    llm_service: LLMService = Depends(get_llm_service)):
     try:
-        chunk = llm_service.chat(text=req.text, prompt=req.prompt, model=req.model, language=req.language, max_tokens=req.max_tokens)
+        chunk = llm_service.chat(text=req.text, model=req.model, language=req.language, max_tokens=req.max_tokens)
         return StreamingResponse(chunk, media_type="text/plain; charset=utf-8")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"STT failed: {e}")
+        raise HTTPException(status_code=500, detail=f"LLM answer failed: {e}")
+
+
+@router.post("/summary", response_model=LLMResponse)
+async def post_summary(req: LLMRequest,
+                   llm_service: LLMService = Depends(get_llm_service)):
+    try:
+        summary = await llm_service.summary(text=req.text, model=req.model, language=req.language,
+                                      max_tokens=req.max_tokens)
+        return LLMResponse(text=summary, model=req.model, language=req.language)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM summary failed: {e}")
