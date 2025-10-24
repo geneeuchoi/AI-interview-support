@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>STT 테스트</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #111827;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+    }
+    h1 { margin-bottom: 24px; }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 16px;
+      margin: 8px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    textarea {
+      width: 90%;
+      max-width: 600px;
+      height: 150px;
+      margin-top: 20px;
+      border-radius: 8px;
+      border: 1px solid #374151;
+      background: #1f2937;
+      color: white;
+      padding: 12px;
+      resize: none;
+    }
+    audio { margin-top: 20px; }
+    input, select {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #374151;
+      background: #1f2937;
+      color: white;
+    }
+    .row { margin: 8px; }
+  </style>
+</head>
+<body>
+  <h1>STT 테스트 클라이언트</h1>
+
+  <div class="row">
+    <label>서버 주소: </label>
+    <input id="baseUrl" type="text" placeholder="예: http://localhost:/api/stt" />
+  </div>
+
+  <div class="row">
+    <label>언어: </label>
+    <select id="language">
+      <option value="ja">일본어 (ja)</option>
+      <option value="ko" selected>한국어 (ko)</option>
+      <option value="en">영어 (en)</option>
+    </select>
+
+    <label>모델: </label>
+    <select id="model">
+      <option value="gpt-4o-mini-transcribe" selected>gpt-4o-mini-transcribe</option>
+      <option value="whisper-1">whisper-1</option>
+    </select>
+  </div>
+
+  <div>
+    <button id="startBtn">🎙️ 녹음 시작</button>
+    <button id="stopBtn" disabled>■ 정지 & 전송</button>
+  </div>
+
+  <audio id="audioPlayer" controls></audio>
+  <textarea id="sttResult" placeholder="변환된 텍스트가 여기에 표시됩니다." readonly></textarea>
+  <textarea id="llmAnswerResult" placeholder="AI의 응답이 여기에 표시됩니다." readonly></textarea>
+  <textarea id="llmSummaryResult" placeholder="AI의 요약이 여기에 표시됩니다." readonly></textarea>
+  <textarea id="emailSendResult" placeholder="이메일 전송 결과가 여기에 표시됩니다." readonly></textarea>
+
+
+
+  <script>
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const sttResultBox = document.getElementById("sttResult");
+    const llmAnswerResultBox = document.getElementById("llmAnswerResult");
+    const llmSummaryResultBox = document.getElementById("llmSummaryResult");
+    const emailSendResultBox = document.getElementById("emailSendResult");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const baseUrlInput = document.getElementById("baseUrl");
+    const languageSelect = document.getElementById("language");
+    const modelSelect = document.getElementById("model");
+
+    let mediaRecorder;
+    let audioChunks = [];
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        // TODO: safari는 webm 지원하지 않음. 나중에 ios도 지원하도록 확장자 수정 필요
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(audioChunks, { type: "audio/webm" });
+          const file = new File([blob], "recording.webm", { type: "audio/webm" });
+          audioPlayer.src = URL.createObjectURL(blob);
+
+          await sendAudioToServer(file);
+        };
+
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        sttResultBox.value = "녹음 중...";
+      } catch (err) {
+        alert("마이크 접근 실패: " + err.message);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    }
+
+    async function sendAudioToServer(file) {
+      const baseUrl = baseUrlInput.value.trim() || window.location.origin;
+      const url = `${baseUrl}/api/stt`;
+      const startTime = performance.now();
+      const formData = new FormData();
+      formData.append("audio", file);
+      formData.append("language", languageSelect.value);
+      formData.append("model", modelSelect.value);
+
+      sttResultBox.value = "서버로 전송 중...";
+
+      try {
+        const res = await fetch(url, { method: "POST", body: formData });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const endTime = performance.now();
+        const elapsed = (endTime - startTime) / 1000;
+        console.log(`[SSTResponse] ${elapsed.toFixed(2)}s`);
+
+        const data = await res.json();
+        sttResultBox.value = `${data.text}`;
+        await llmAnswer(data.text);
+        await llmSummary(data.text);
+
+      } catch (err) {
+        sttResultBox.value = "오류 발생: " + err.message;
+      }
+    }
+
+    async function llmAnswer(text) {
+      const baseUrl = baseUrlInput.value.trim() || window.location.origin;
+      const url = `${baseUrl}/api/llm/answer`;
+      const startTime = performance.now();
+
+      const body = {
+        text,
+        model: "gpt-4o-mini",
+        language: "ja"
+      };
+
+      llmAnswerResultBox.value = "서버로 전송 중...";
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          let errDetail = {};
+          try {
+            errDetail = await res.json();
+          } catch {
+            try {
+              const t = await res.text();
+              errDetail = { message: t.slice(0, 200) };
+            } catch {}
+          }
+          throw new Error(`HTTP ${res.status} ${JSON.stringify(errDetail)}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+
+        let done = false;
+        llmAnswerResultBox.value = ""
+        const startTime = performance.now();
+        let endTime = performance.now();
+        let elapsed = (endTime - startTime) / 1000;
+        console.log(`[LLMCall] ${elapsed.toFixed(2)}s`);
+        while (!done) {
+          const { value, done: streamDone } = await reader.read();
+          done = streamDone;
+          if (value) {
+            const chunkText = decoder.decode(value, { stream: true });
+            llmAnswerResultBox.value += chunkText;
+          }
+        }
+        llmAnswerResultBox.value += decoder.decode();
+        endTime = performance.now();
+        elapsed = (endTime - startTime) / 1000;
+        console.log(`[LLMResponseFlush] ${elapsed.toFixed(2)}s`);
+      } catch (err) {
+        llmAnswerResultBox.value = err.message;
+      }
+    }
+
+    async function llmSummary(text) {
+
+      const baseUrl = baseUrlInput.value.trim() || window.location.origin;
+      const url = `${baseUrl}/api/llm/summary`;
+
+      const body = {
+        text,
+        model: "gpt-4o-mini",
+        language: "ja"
+      };
+
+      llmSummaryResultBox.value = "서버로 전송 중...";
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const errDetail = await res.json().catch(() => ({}));
+          throw new Error(`HTTP ${res.status} ${JSON.stringify(errDetail)}`);
+        }
+
+        const data = await res.json();
+        llmSummaryResultBox.value = `${data.text}`;
+        await sendSummary(data.text)
+      } catch (err) {
+        llmSummaryResultBox.value = err.message;
+      }
+    }
+
+    async function sendSummary(summary) {
+      const baseUrl = baseUrlInput.value.trim() || window.location.origin;
+      const url = `${baseUrl}/api/email`;
+
+      const body = {
+        summary
+      };
+
+      emailSendResultBox.value = "서버로 전송 중...";
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const errDetail = await res.json().catch(() => ({}));
+          throw new Error(`HTTP ${res.status} ${JSON.stringify(errDetail)}`);
+        }
+
+        emailSendResultBox.value = "전송이 완료되었습니다!";
+      } catch (err) {
+        emailSendResultBox.value = err.message;
+      }
+    }
+
+    startBtn.addEventListener("click", startRecording);
+    stopBtn.addEventListener("click", stopRecording);
+
+  </script>
+</body>
+</html>
