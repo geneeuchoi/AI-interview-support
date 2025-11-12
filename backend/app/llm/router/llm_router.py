@@ -12,7 +12,8 @@ def get_llm_service(request: Request) -> LLMService:
 async def post_answer(req: LLMRequest,
                    llm_service: LLMService = Depends(get_llm_service)):
     try:
-        chunk = llm_service.chat(text=req.text, model=req.model, language=req.language, max_tokens=req.max_tokens)
+        chunk = llm_service.chat(text=req.text, agenda=req.agenda,
+                                 model=req.model, language=req.language, max_tokens=req.max_tokens)
         return StreamingResponse(chunk, media_type="text/plain; charset=utf-8")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LLM answer failed: {e}")
@@ -22,8 +23,8 @@ async def post_answer(req: LLMRequest,
 async def post_summary(req: LLMRequest,
                    llm_service: LLMService = Depends(get_llm_service)):
     try:
-        summary = await llm_service.summary(text=req.text, model=req.model, language=req.language,
-                                      max_tokens=req.max_tokens)
+        summary = await llm_service.summary(text=req.text, userName=req.userName, agenda=req.agenda, time=req.time,
+                                            model=req.model, language=req.language, max_tokens=req.max_tokens)
         return LLMResponse(text=summary, model=req.model, language=req.language)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LLM summary failed: {e}")

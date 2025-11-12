@@ -6,6 +6,9 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/web/templates")
 
 @router.get("/prototype", response_class=HTMLResponse)
-async def email_test(request: Request):
+async def prototype_test(request: Request):
     return templates.TemplateResponse("prototype.html", {"request": request})
 
+@router.get("/metaInfo", response_class=HTMLResponse)
+async def meta_info(request: Request):
+    return templates.TemplateResponse("meta_info.html", {"request": request})

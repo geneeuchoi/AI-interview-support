@@ -1,3 +1,9 @@
+const userName = localStorage.getItem('userName');
+const agenda = localStorage.getItem('agenda');
+
+let startTime = 0;
+let endTime = 0;
+
 const fullStartBtn = document.getElementById("fullStartBtn");
 const fullStopBtn = document.getElementById("fullStopBtn");
 const partStartBtn = document.getElementById("partStartBtn");
@@ -12,7 +18,10 @@ const audioPlayer = document.getElementById("audioPlayer");
 
 const fmt = pickAudioFormat();
 // TODO: 배포시 도메인 수정
-const baseUrl = "http://localhost:8000";
+const baseUrl = window.location.hostname === 'localhost'
+    ? "http://localhost:8000"
+    : `https://${window.location.host}`;
+
 let masterStream = null;
 
 const full = {
@@ -61,6 +70,8 @@ function pickAudioFormat() {
 // ---------- 전체 녹음 ----------
 async function startFullRecording() {
   try {
+    startTime = performance.now();
+
     await ensureMasterStream();
     full.chunks = [];
     full.recorder = new MediaRecorder(masterStream, fmt.mime ? { mimeType: fmt.mime } : {});
@@ -101,6 +112,7 @@ async function startFullRecording() {
 function stopFullRecording() {
   if (full.recorder && full.recorder.state === "recording") {
     full.recorder.stop();
+    endTime = performance.now();
   }
   fullStartBtn.disabled = false;
   fullStopBtn.disabled = true;
@@ -194,12 +206,12 @@ async function sendAudioToServer(file) {
 // 부분 녹음(실시간 대응) 답변
 async function llmAnswer(text) {
   const url = `${baseUrl}/api/llm/answer`;
-  const startTime = performance.now();
 
   const body = {
     text,
+    agenda,
     model: "gpt-4o-mini",
-    language: "ja"
+    language: "ja",
   };
 
   llmAnswerResultBox.value = "서버로 전송 중...";
@@ -246,13 +258,14 @@ async function llmAnswer(text) {
 // 전체 녹음(면접 요약) 답변
 async function llmSummary(text) {
   const url = `${baseUrl}/api/llm/summary`;
-
   const body = {
     text,
+    userName,
+    agenda,
+    time: Math.floor((endTime - startTime) / 1000),
     model: "gpt-4o-mini",
-    language: "ja"
+    language: "ja",
   };
-
   llmSummaryResultBox.value = "서버로 전송 중...";
 
   try {
@@ -280,7 +293,8 @@ async function sendSummary(summary) {
   const url = `${baseUrl}/api/email`;
 
   const body = {
-    summary
+    summary,
+    userName
   };
 
   emailSendResultBox.value = "서버로 전송 중...";
