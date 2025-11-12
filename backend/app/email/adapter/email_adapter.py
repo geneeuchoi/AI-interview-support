@@ -2,6 +2,7 @@ import os
 import asyncio
 from email.mime.text import MIMEText
 from email.utils import formataddr
+from datetime import datetime
 import aiosmtplib
 
 
@@ -13,9 +14,9 @@ class EmailSendProvider:
         self.mail_sender_name = os.getenv("MAIL_SENDER_NAME")
         self.mail_recipient = os.getenv("MAIL_RECIPIENT")
 
-    async def by_gmail(self, summary: str) -> None:
+    async def by_gmail(self, summary: str, userName: str) -> None:
         msg = MIMEText(summary, _charset="utf-8")
-        msg["Subject"] = self.mail_subject
+        msg["Subject"] = f"{self.mail_subject} {datetime.now().strftime('%Y년 %-m월 %-d일')} {userName}님 면접 요약"
         msg["From"] = formataddr((self.mail_sender_name, self.gmail_root))
         msg["To"] = self.mail_recipient
 

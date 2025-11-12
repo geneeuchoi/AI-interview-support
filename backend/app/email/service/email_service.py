@@ -4,5 +4,5 @@ class EmailService:
     def __init__(self, provider: EmailSendProvider) -> None:
         self.provider = provider
 
-    async def send(self, summary):
-        await self.provider.by_gmail(summary=summary)
+    async def send(self, summary, userName):
+        await self.provider.by_gmail(summary=summary, userName=userName)

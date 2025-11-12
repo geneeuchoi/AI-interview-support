@@ -16,12 +16,13 @@ class OpenAILlmProvider:
     async def qna(
             self,
             text: str,
+            agenda: str,
             model: str,
             language: str,
             max_tokens: int,
     ) -> AsyncGenerator[str, None]:
         # TODO: 프롬프트 엔지니어링
-        prompt = "당신은 일본인 IT 면접관입니다.\n유저의 질문에 당신이 만족할 만한 답변을 제시하세요.\n단, 답변은 일본어로 하되, 각각의 한자 옆에 요미가나를 추가해서 일본어에 능숙하지 않은 사용자가 빠르게 읽을 수 있게 도와주세요."
+        prompt = f"[역할]당신은 일본인 IT 면접관입니다.\n 당신의 회사에서 의뢰한 안건 설명을 참고하여, 유저의 질문에 당신이 만족할 만한 답변을 제시하세요.\n[안건]${agenda} \n[조건]답변은 일본어로 하되, 각각의 한자 옆에 요미가나를 추가해서 일본어에 능숙하지 않은 사용자가 빠르게 읽을 수 있게 도와주세요. [중요] 마지막으로 질문하고 싶은 사항이 있냐는 뉘앙스의 유저 응답이 들어올 경우, 안건을 토대로 질문을 만들어주세요."
 
         def _call_openai() -> Iterable:
             return self.client.chat.completions.create(
@@ -65,13 +66,16 @@ class OpenAILlmProvider:
     async def summary(
             self,
             text: str,
+            userName: str,
+            agenda: str,
+            time: int,
             model: str,
             language: str,
             max_tokens: int,
     ) -> str:
 
         # TODO: 프롬프트 엔지니어링
-        prompt = "당신은 요약이 특기입니다. 면접 내용을 요약해서 텍스트로 제시해주세요. 또한 면접에 대한 총평과 피드백도 내려주세요."
+        prompt = f"[역할]당신은 유능한 인사 담당자입니다. 메타 정보에 근거해서, 면접 내용을 형식에 맞게 요약해서 제시해주세요. 단, 한국어로 요약 해주세요. \n[메타 정보] 면접자: ${userName} 면접 시간:${time} 안건: ${agenda} \n[형식] 1. 메타 정보: 회사명, 면접자, 면접 시간 2.안건 설명 3. 질문과 답변"
 
         def _call_openai() -> str:
             try:

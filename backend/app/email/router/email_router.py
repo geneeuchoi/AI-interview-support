@@ -11,7 +11,7 @@ def get_email_service(request: Request) -> EmailService:
 async def post_email(req: EmailRequest,
                    email_service: EmailService = Depends(get_email_service)):
     try:
-        await email_service.send(summary=req.summary)
+        await email_service.send(summary=req.summary, userName=req.userName)
         return EmailResponse(summary=req.summary)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Email send failed: {e}")

@@ -13,8 +13,6 @@ class STTRequest(BaseModel):
     ) -> "STTRequest":
         return cls(model=model, language=language)
 
-
-
 class STTResponse(BaseModel):
     text: str = Field(..., description="Transcribed text")
     model: str = Field(..., description="STT model used")

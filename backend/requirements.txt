@@ -1,9 +1,7 @@
 fastapi==0.115.0
 uvicorn==0.30.1
 python-dotenv==1.0.1
-# DB
-SQLAlchemy==2.0.36
-pymysql==1.1.1
+
 # 업로드
 python-multipart==0.0.9
 ffmpeg-python==0.2.0
