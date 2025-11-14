@@ -84,10 +84,16 @@ async function startFullRecording() {
       const file = new File([blob], `full.${fmt.ext || 'wav'}`, { type: blob.type });
       audioPlayer.src = URL.createObjectURL(blob);
 
-      // STT -> LLM 전송
       try {
+        // STT -> LLM 전송 및 요약
         const text = await sendAudioToServer(file);
-        await llmSummary(text);
+        const summary = await llmSummary(text);
+
+        // 오디오 압축
+        const compressedAudio = await compressAudio(file)
+
+        // 요약, 오디오 이메일 전송
+        await sendSummary(summary, compressedAudio)
       } catch (e) {
         console.error(e);
       } finally {
@@ -282,28 +288,27 @@ async function llmSummary(text) {
 
     const data = await res.json();
     llmSummaryResultBox.value = `${data.text}`;
-    await sendSummary(data.text)
+    return data.text
   } catch (err) {
     llmSummaryResultBox.value = err.message;
   }
 }
 
 // ---------- 이메일 전송 ----------
-async function sendSummary(summary) {
+async function sendSummary(summary, audio) {
   const url = `${baseUrl}/api/email`;
 
-  const body = {
-    summary,
-    userName
-  };
+  const formData = new FormData();
+  formData.append("summary", summary);
+  formData.append("userName", userName);
+  formData.append("audio", audio);
 
   emailSendResultBox.value = "서버로 전송 중...";
 
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: {"Content-Type": "application/json; charset=utf-8"},
-      body: JSON.stringify(body),
+      body: formData,
     });
 
     if (!res.ok) {
@@ -314,5 +319,30 @@ async function sendSummary(summary) {
     emailSendResultBox.value = "전송이 완료되었습니다!";
   } catch (err) {
     emailSendResultBox.value = err.message;
+  }
+}
+
+// ---------- 오디오 압축 ----------
+async function compressAudio(audio) {
+  const url = `${baseUrl}/api/audio`;
+  const formData = new FormData();
+  formData.append("audio", audio);
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errDetail = await res.json().catch(() => ({}));
+      throw new Error(`HTTP ${res.status} ${JSON.stringify(errDetail)}`);
+    }
+
+    const blob = await res.blob();
+    return new File([blob], `compressed_${audio.name}`, {type: 'audio/mpeg'});
+  } catch (err) {
+    console.error("Audio Error:", err);
+    throw err;
   }
 }

@@ -1,9 +1,12 @@
 import os
 import asyncio
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.audio import MIMEAudio
 from email.utils import formataddr
 from datetime import datetime
 import aiosmtplib
+from typing import Optional
 
 
 class EmailSendProvider:
@@ -14,11 +17,23 @@ class EmailSendProvider:
         self.mail_sender_name = os.getenv("MAIL_SENDER_NAME")
         self.mail_recipient = os.getenv("MAIL_RECIPIENT")
 
-    async def by_gmail(self, summary: str, userName: str) -> None:
-        msg = MIMEText(summary, _charset="utf-8")
+    async def by_gmail(self, summary: str, userName: str, audio_data: Optional[bytes] = None, audio_filename: Optional[str] = None) -> None:
+        msg = MIMEMultipart()
         msg["Subject"] = f"{self.mail_subject} {datetime.now().strftime('%Y년 %-m월 %-d일')} {userName}님 면접 요약"
         msg["From"] = formataddr((self.mail_sender_name, self.gmail_root))
         msg["To"] = self.mail_recipient
+
+        body = MIMEText(summary, _charset="utf-8")
+        msg.attach(body)
+
+        if audio_data and audio_filename:
+            audio_attachment = MIMEAudio(audio_data, _subtype="mpeg")
+            audio_attachment.add_header(
+                "Content-Disposition",
+                "attachment",
+                filename=audio_filename
+            )
+            msg.attach(audio_attachment)
 
         smtp_kwargs = {
             "hostname": "smtp.gmail.com",

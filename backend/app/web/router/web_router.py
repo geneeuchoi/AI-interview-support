@@ -9,6 +9,6 @@ templates = Jinja2Templates(directory="app/web/templates")
 async def prototype_test(request: Request):
     return templates.TemplateResponse("prototype.html", {"request": request})
 
-@router.get("/metaInfo", response_class=HTMLResponse)
+@router.get("/meta_info", response_class=HTMLResponse)
 async def meta_info(request: Request):
     return templates.TemplateResponse("meta_info.html", {"request": request})
