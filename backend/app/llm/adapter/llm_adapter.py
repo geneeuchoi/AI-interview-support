@@ -79,15 +79,16 @@ class OpenAILlmProvider:
 
         def _call_openai() -> str:
             try:
-                response = self.client.chat.completions.create(
+
+                response = self.client.responses.create(
                     model=model,
-                    messages=[
+                    input=[
                         {"role": "system", "content": prompt},
                         {"role": "user", "content": text},
                     ],
-                    max_completion_tokens=max_tokens,
+                    max_output_tokens=max_tokens,
                 )
-                reply = (response.choices[0].message.content or "").strip()
+                reply = response.output_text
 
                 print(f"[OpenAILlmProvider] reply: {reply}")
                 return reply

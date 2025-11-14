@@ -10,8 +10,8 @@ pydub
 # template
 jinja2
 
-openai==1.45.0
-httpx<0.28
+openai
+httpx
 
 # email
 aiosmtplib

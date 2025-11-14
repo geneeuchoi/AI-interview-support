@@ -269,7 +269,7 @@ async function llmSummary(text) {
     userName,
     agenda,
     time: Math.floor((endTime - startTime) / 1000),
-    model: "gpt-4o-mini",
+    model: "gpt-4.1",
     language: "ja",
   };
   llmSummaryResultBox.value = "서버로 전송 중...";
