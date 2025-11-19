@@ -16,12 +16,14 @@ class EmailSendProvider:
         self.mail_subject = os.getenv("MAIL_SUBJECT")
         self.mail_sender_name = os.getenv("MAIL_SENDER_NAME")
         self.mail_recipient = os.getenv("MAIL_RECIPIENT")
+        self.mail_cc = os.getenv("MAIL_CC")
 
     async def by_gmail(self, summary: str, userName: str, audio_data: Optional[bytes] = None, audio_filename: Optional[str] = None) -> None:
         msg = MIMEMultipart()
         msg["Subject"] = f"{self.mail_subject} {datetime.now().strftime('%Y년 %-m월 %-d일')} {userName}님 면접 요약"
         msg["From"] = formataddr((self.mail_sender_name, self.gmail_root))
         msg["To"] = self.mail_recipient
+        msg["Cc"] = self.mail_cc
 
         body = MIMEText(summary, _charset="utf-8")
         msg.attach(body)

@@ -33,7 +33,7 @@ class AudioCompressProvider:
         if len(input_data) <= self.max_file_size:
             pass
 
-        bitrates = ["128k", "96k", "64k", "48k", "32k"]
+        bitrates = ["48k", "32k"]
 
         for bitrate in bitrates:
             output_buffer = io.BytesIO()
