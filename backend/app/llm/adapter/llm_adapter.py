@@ -22,7 +22,7 @@ class OpenAILlmProvider:
             max_tokens: int,
     ) -> AsyncGenerator[str, None]:
         # TODO: 프롬프트 엔지니어링
-        prompt = f"[역할]당신은 일본인 IT 면접관입니다.\n 당신의 회사에서 의뢰한 안건 설명을 참고하여, 유저의 질문에 당신이 만족할 만한 답변을 제시하세요.\n[안건]${agenda} \n[조건]답변은 일본어로 하되, 각각의 한자 옆에 요미가나를 추가해서 일본어에 능숙하지 않은 사용자가 빠르게 읽을 수 있게 도와주세요. [중요] 마지막으로 질문하고 싶은 사항이 있냐는 뉘앙스의 유저 응답이 들어올 경우, 안건을 토대로 질문을 만들어주세요."
+        prompt = f"[역할]당신은 일본인 IT 면접관입니다.\n 당신의 회사에서 의뢰한 안건 설명을 참고하여, 유저의 질문에 당신이 만족할 만한 답변을 제시하세요.\n[안건]${agenda} \n[조건]1. 답변은 일본어로 하되, 각각의 한자 옆에 요미가나를 추가해서 일본어에 능숙하지 않은 사용자가 빠르게 읽을 수 있게 도와주세요. 2. 사용자가 보고 그대로 읽을 수 있도록 자연스러우면서도 정중한 구어체로 답변을 제공해주세요. 3. 이때, \"네, 답변해드리겠습니다\"와 같은 말은 제외하고 제가 요구한 사항만 제공해주세요. [중요] 마지막으로 질문하고 싶은 사항이 있냐는 뉘앙스의 유저 응답이 들어올 경우, 안건을 토대로 질문을 만들어주세요."
 
         def _call_openai() -> Iterable:
             return self.client.chat.completions.create(
@@ -75,22 +75,21 @@ class OpenAILlmProvider:
     ) -> str:
 
         # TODO: 프롬프트 엔지니어링
-        prompt = f"[역할]당신은 유능한 인사 담당자입니다. 메타 정보에 근거해서, 면접 내용을 형식에 맞게 요약해서 제시해주세요. 단, 한국어로 요약 해주세요. \n[메타 정보] 면접자: ${userName} 면접 시간:${time} 안건: ${agenda} \n[형식] 1. 메타 정보: 회사명, 면접자, 면접 시간 2.안건 설명 3. 질문과 답변"
+        prompt = f"[역할]당신은 유능한 인사 담당자입니다. \n[조건] 1. 메타 정보에 근거해서, 면접 내용을 형식에 맞게 요약해서 제시해주세요. 단, 한국어로 요약 해주세요. 2. 면접은 지원자의 스킬시트를 설명하고 시작하는 경우가 많습니다. 스킬시트를 설명하는 것 같다면, [스킬시트 설명]이라는 소제목 아래에 내용을 정리해주세요. 3. 면접자, 안건은 메타정보 그대로 템플릿에 붙여넣어 주세요. 4. 면접 시간은 초로 주어집니다. 60초를 넘어갈 경우 분, 초로 나누어서 제공해주세요. \n[메타 정보] 면접자: ${userName} 면접 시간:${time}초 안건: ${agenda} \n[형식] 1. 메타 정보: 면접자, 면접 시간 \n2.안건 설명 3.-스킬시트 설명: -질문: -답변: "
 
         def _call_openai() -> str:
             try:
-                response = self.client.chat.completions.create(
+
+                response = self.client.responses.create(
                     model=model,
-                    messages=[
+                    input=[
                         {"role": "system", "content": prompt},
                         {"role": "user", "content": text},
                     ],
-                    max_completion_tokens=max_tokens,
+                    max_output_tokens=max_tokens,
                 )
-                reply = (response.choices[0].message.content or "").strip()
 
-                print(f"[OpenAILlmProvider] reply: {reply}")
-                return reply
+                return response.output_text
             except Exception as e:
                 # OpenAI SDK 에러 객체에 response가 붙어오는 경우가 있음
                 detail = getattr(e, "response", None)
