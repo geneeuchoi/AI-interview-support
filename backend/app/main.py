@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -22,8 +23,7 @@ app = FastAPI(title="AI interview agent", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # React
-        "http://localhost:5173",  # Vite
+        os.getenv("FRONT_URL"),
     ],
     allow_credentials=True,
     allow_methods=["*"],
