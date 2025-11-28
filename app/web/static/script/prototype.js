@@ -17,7 +17,6 @@ const emailSendResultBox = document.getElementById("emailSendResult");
 const audioPlayer = document.getElementById("audioPlayer");
 
 const fmt = pickAudioFormat();
-// TODO: 배포시 도메인 수정
 const baseUrl = window.location.hostname === 'localhost'
     ? "http://localhost:8000"
     : `https://${window.location.host}`;

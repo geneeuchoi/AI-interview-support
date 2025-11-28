@@ -4,7 +4,6 @@ from typing import Optional
 from openai import OpenAI
 from dotenv import load_dotenv, find_dotenv
 
-# TODO: 배포시 로그 삭제
 os.environ.setdefault("OPENAI_LOG", "debug")
 load_dotenv(find_dotenv(usecwd=True))
 

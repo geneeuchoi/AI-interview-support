@@ -33,6 +33,7 @@ class AudioCompressProvider:
         if len(input_data) <= self.max_file_size:
             pass
 
+        # TODO: 음성 압축률
         bitrates = ["48k", "32k"]
 
         for bitrate in bitrates:
