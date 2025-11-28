@@ -10,6 +10,8 @@ from app.stt.router.stt_router import router as stt_router
 from app.llm.router.llm_router import router as llm_router
 from app.email.router.email_router import router as email_router
 from app.audio.router.audio_router import router as audio_router
+from app.web.router.web_router import router as web_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,3 +36,4 @@ app.include_router(stt_router, prefix="/api", tags=["stt"])
 app.include_router(llm_router, prefix="/api", tags=["llm"])
 app.include_router(email_router, prefix="/api", tags=["email"])
 app.include_router(audio_router, prefix="/api", tags=["audio"])
+app.include_router(web_router, tags=["web"])
