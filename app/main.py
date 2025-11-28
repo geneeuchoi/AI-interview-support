@@ -11,7 +11,8 @@ from app.llm.router.llm_router import router as llm_router
 from app.email.router.email_router import router as email_router
 from app.audio.router.audio_router import router as audio_router
 from app.web.router.web_router import router as web_router
-
+from fastapi.templating import Jinja2Templates
+from starlette.staticfiles import StaticFiles
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -31,6 +32,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
+app.state.templates = templates
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(stt_router, prefix="/api", tags=["stt"])
 app.include_router(llm_router, prefix="/api", tags=["llm"])
