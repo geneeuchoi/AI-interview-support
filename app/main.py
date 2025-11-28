@@ -33,11 +33,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+TEMPLATES_DIR = "app/web/templates" # 프로젝트 루트에서 상대 경로 지정
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 app.state.templates = templates
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
+STATIC_DIR = "app/web/static" # 프로젝트 루트에서 상대 경로 지정
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(stt_router, prefix="/api", tags=["stt"])
 app.include_router(llm_router, prefix="/api", tags=["llm"])
 app.include_router(email_router, prefix="/api", tags=["email"])
