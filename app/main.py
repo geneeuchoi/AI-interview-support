@@ -36,7 +36,7 @@ app.add_middleware(
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 app.state.templates = templates
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(stt_router, prefix="/api", tags=["stt"])
 app.include_router(llm_router, prefix="/api", tags=["llm"])
